@@ -40,6 +40,7 @@ export const defaultState = {
     showTmdbRating: false,
     showImdbRating: false,
     showRottenTomatoesRating: false,
+    showTraktRating: false,
     showTags: false,
     showSearchAction: false
   },
@@ -158,7 +159,7 @@ export const defaultState = {
     },
     {
       name: 'minimumAvailability',
-      label: () => translate('MinAvailability'),
+      label: () => translate('MinimumAvailability'),
       isSortable: true,
       isVisible: false
     },
@@ -177,6 +178,12 @@ export const defaultState = {
     {
       name: 'genres',
       label: () => translate('Genres'),
+      isSortable: false,
+      isVisible: false
+    },
+    {
+      name: 'keywords',
+      label: () => translate('Keywords'),
       isSortable: false,
       isVisible: false
     },
@@ -201,6 +208,12 @@ export const defaultState = {
     {
       name: 'rottenTomatoesRating',
       label: () => translate('RottenTomatoesRating'),
+      isSortable: true,
+      isVisible: false
+    },
+    {
+      name: 'traktRating',
+      label: () => translate('TraktRating'),
       isSortable: true,
       isVisible: false
     },
@@ -278,6 +291,10 @@ export const defaultState = {
 
     rottenTomatoesRating: function({ ratings = {} }) {
       return ratings.rottenTomatoes ? ratings.rottenTomatoes.value : -1;
+    },
+
+    traktRating: function({ ratings = {} }) {
+      return ratings.trakt ? ratings.trakt.value : 0;
     }
   },
 
@@ -462,8 +479,8 @@ export const defaultState = {
       label: () => translate('Genres'),
       type: filterBuilderTypes.ARRAY,
       optionsSelector: function(items) {
-        const genreList = items.reduce((acc, movie) => {
-          movie.genres.forEach((genre) => {
+        const genreList = items.reduce((acc, { genres = [] }) => {
+          genres.forEach((genre) => {
             acc.push({
               id: genre,
               name: genre
@@ -474,6 +491,27 @@ export const defaultState = {
         }, []);
 
         return genreList.sort(sortByProp('name'));
+      }
+    },
+    {
+      name: 'keywords',
+      label: () => translate('Keywords'),
+      type: filterBuilderTypes.ARRAY,
+      optionsSelector: function(items) {
+        const keywordList = items.reduce((acc, { keywords = [] }) => {
+          keywords.forEach((keyword) => {
+            if (acc.findIndex((a) => a.id === keyword) === -1) {
+              acc.push({
+                id: keyword,
+                name: keyword
+              });
+            }
+          });
+
+          return acc;
+        }, []);
+
+        return keywordList.sort(sortByProp('name'));
       }
     },
     {
@@ -489,6 +527,12 @@ export const defaultState = {
     {
       name: 'imdbRating',
       label: () => translate('ImdbRating'),
+      type: filterBuilderTypes.NUMBER,
+      numberFractionDigits: 1
+    },
+    {
+      name: 'imdbVotes',
+      label: () => translate('ImdbVotes'),
       type: filterBuilderTypes.NUMBER
     },
     {
@@ -497,8 +541,13 @@ export const defaultState = {
       type: filterBuilderTypes.NUMBER
     },
     {
-      name: 'imdbVotes',
-      label: () => translate('ImdbVotes'),
+      name: 'traktRating',
+      label: () => translate('TraktRating'),
+      type: filterBuilderTypes.NUMBER
+    },
+    {
+      name: 'traktVotes',
+      label: () => translate('TraktVotes'),
       type: filterBuilderTypes.NUMBER
     },
     {

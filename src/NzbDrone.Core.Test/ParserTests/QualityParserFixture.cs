@@ -7,7 +7,6 @@ using NzbDrone.Core.Test.Framework;
 namespace NzbDrone.Core.Test.ParserTests
 {
     [TestFixture]
-
     public class QualityParserFixture : CoreTest
     {
         [SetUp]
@@ -36,6 +35,7 @@ namespace NzbDrone.Core.Test.ParserTests
         };
 
         [TestCase("Movie.Title.3.2017.720p.TSRip.x264.AAC-Ozlem", false)]
+        [TestCase("Movie: Title (2024) TeleSynch 720p | HEVC-FILVOVAN", false)]
         public void should_parse_ts(string title, bool proper)
         {
             ParseAndVerifyQuality(title, QualitySource.TELESYNC, proper, Resolution.R720p);
@@ -150,6 +150,12 @@ namespace NzbDrone.Core.Test.ParserTests
             ParseAndVerifyQuality(title, QualitySource.TV, proper, Resolution.R1080p);
         }
 
+        [TestCase("[NOGRP][国漫][诛仙][Movie Title 2022][19][HEVC][GB][4K]", false)]
+        public void should_parse_hdtv2160p_quality(string title, bool proper)
+        {
+            ParseAndVerifyQuality(title, QualitySource.TV, proper, Resolution.R2160p);
+        }
+
         [TestCase("Movie Name S01E04 Mexicos Death Train 720p WEB DL", false)]
         [TestCase("Movie Name S02E21 720p WEB DL DD5 1 H 264", false)]
         [TestCase("Movie Name S04E22 720p WEB DL DD5 1 H 264 NFHD", false)]
@@ -229,6 +235,9 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie Name 2020 WEB-DL 4K H265 10bit HDR DDP5.1 Atmos-PTerWEB", false)]
         [TestCase("The.Movie.2022.NORDiC.2160p.DV.HDR.WEB.H.265-NiDHUG", false)]
         [TestCase("Movie.Name.2024.German.Dubbed.DL.AAC.2160p.DV.HDR.WEB.HEVC-GROUP", false)]
+        [TestCase("Movie.Name.2024.German.AC3D.DL.2160p.Hybrid.WEB.DV.HDR10Plus.HEVC-GROUP", false)]
+        [TestCase("Movie.Name.2024.German.Atmos.Dubbed.DL.2160p.Hybrid.WEB.DV.HDR10Plus.HEVC-GROUP", false)]
+        [TestCase("Movie.Name.2024.German.EAC3D.DL.2160p.Hybrid.WEB.DV.HDR10Plus.HEVC-GROUP", false)]
         public void should_parse_webdl2160p_quality(string title, bool proper)
         {
             ParseAndVerifyQuality(title, QualitySource.WEBDL, proper, Resolution.R2160p);
@@ -331,6 +340,8 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("[Vodes] Movie Title - Other Title (2020) [BDRemux 1080p HEVC Dual-Audio]")]
         [TestCase("This.Wonderful.Movie.1991.German.ML.1080p.BluRay.AVC-GeRMaNSCeNEGRoUP")]
         [TestCase("Movie.Name.2011.1080p.DD.2.0.AVC.REMUX-FraMeSToR")]
+        [TestCase("Movie Name 2018 1080p BluRay Hybrid-REMUX AVC TRUEHD 5.1 Dual Audio-ZR-")]
+        [TestCase("Movie.Name.2018.1080p.BluRay.Hybrid-REMUX.AVC.TRUEHD.5.1.Dual.Audio-ZR-")]
         public void should_parse_remux1080p_quality(string title)
         {
             ParseAndVerifyQuality(title, QualitySource.BLURAY, false, Resolution.R1080p, Modifier.REMUX);
@@ -345,6 +356,8 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Movie Name (2021) [Remux-2160p x265 HDR 10-BIT DTS-HD MA 7.1]-FraMeSToR.mkv")]
         [TestCase("This.Wonderful.Movie.1991.German.ML.2160p.BluRay.HEVC-GeRMaNSCeNEGRoUP")]
         [TestCase("Movie.Name.2011.2160p.DD.2.0.AVC.REMUX-FraMeSToR")]
+        [TestCase("Movie Name 2018 2160p BluRay Hybrid-REMUX AVC TRUEHD 5.1 Dual Audio-ZR-")]
+        [TestCase("Movie.Name.2018.2160p.BluRay.Hybrid-REMUX.AVC.TRUEHD.5.1.Dual.Audio-ZR-")]
         public void should_parse_remux2160p_quality(string title)
         {
             ParseAndVerifyQuality(title, QualitySource.BLURAY, false, Resolution.R2160p, Modifier.REMUX);

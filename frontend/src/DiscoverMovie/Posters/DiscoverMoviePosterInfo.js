@@ -4,6 +4,7 @@ import Icon from 'Components/Icon';
 import ImdbRating from 'Components/ImdbRating';
 import RottenTomatoRating from 'Components/RottenTomatoRating';
 import TmdbRating from 'Components/TmdbRating';
+import TraktRating from 'Components/TraktRating';
 import { icons } from 'Helpers/Props';
 import getMovieStatusDetails from 'Movie/getMovieStatusDetails';
 import formatRuntime from 'Utilities/Date/formatRuntime';
@@ -28,7 +29,8 @@ function DiscoverMoviePosterInfo(props) {
     movieRuntimeFormat,
     showTmdbRating,
     showImdbRating,
-    showRottenTomatoesRating
+    showRottenTomatoesRating,
+    showTraktRating
   } = props;
 
   if (sortKey === 'status' && status) {
@@ -48,15 +50,13 @@ function DiscoverMoviePosterInfo(props) {
   }
 
   if (sortKey === 'inCinemas' && inCinemas) {
-    const inCinemasDate = getRelativeDate(
-      inCinemas,
+    const inCinemasDate = getRelativeDate({
+      date: inCinemas,
       shortDateFormat,
       showRelativeDates,
-      {
-        timeFormat,
-        timeForToday: false
-      }
-    );
+      timeFormat,
+      timeForToday: false
+    });
 
     return (
       <div className={styles.info} title={translate('InCinemas')}>
@@ -66,15 +66,13 @@ function DiscoverMoviePosterInfo(props) {
   }
 
   if (sortKey === 'digitalRelease' && digitalRelease) {
-    const digitalReleaseDate = getRelativeDate(
-      digitalRelease,
+    const digitalReleaseDate = getRelativeDate({
+      date: digitalRelease,
       shortDateFormat,
       showRelativeDates,
-      {
-        timeFormat,
-        timeForToday: false
-      }
-    );
+      timeFormat,
+      timeForToday: false
+    });
 
     return (
       <div className={styles.info} title={translate('DigitalRelease')}>
@@ -84,15 +82,13 @@ function DiscoverMoviePosterInfo(props) {
   }
 
   if (sortKey === 'physicalRelease' && physicalRelease) {
-    const physicalReleaseDate = getRelativeDate(
-      physicalRelease,
+    const physicalReleaseDate = getRelativeDate({
+      date: physicalRelease,
       shortDateFormat,
       showRelativeDates,
-      {
-        timeFormat,
-        timeForToday: false
-      }
-    );
+      timeFormat,
+      timeForToday: false
+    });
 
     return (
       <div className={styles.info} title={translate('PhysicalRelease')}>
@@ -141,6 +137,14 @@ function DiscoverMoviePosterInfo(props) {
     );
   }
 
+  if (!showTraktRating && sortKey === 'traktRating' && !!ratings.trakt) {
+    return (
+      <div className={styles.info}>
+        <TraktRating ratings={ratings} iconSize={12} />
+      </div>
+    );
+  }
+
   return null;
 }
 
@@ -160,7 +164,8 @@ DiscoverMoviePosterInfo.propTypes = {
   movieRuntimeFormat: PropTypes.string.isRequired,
   showTmdbRating: PropTypes.bool.isRequired,
   showImdbRating: PropTypes.bool.isRequired,
-  showRottenTomatoesRating: PropTypes.bool.isRequired
+  showRottenTomatoesRating: PropTypes.bool.isRequired,
+  showTraktRating: PropTypes.bool.isRequired
 };
 
 export default DiscoverMoviePosterInfo;

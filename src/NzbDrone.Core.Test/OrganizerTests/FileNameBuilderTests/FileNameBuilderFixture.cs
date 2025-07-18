@@ -16,6 +16,7 @@ using NzbDrone.Core.Movies.Translations;
 using NzbDrone.Core.Organizer;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.Test.Framework;
+using NzbDrone.Test.Common;
 
 namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
 {
@@ -292,7 +293,7 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
         {
             _namingConfig.RenameMovies = false;
             _movieFile.RelativePath = null;
-            _movieFile.Path = @"C:\Test\Unsorted\Movie - S01E01 - Test";
+            _movieFile.Path = @"C:\Test\Unsorted\Movie - S01E01 - Test".AsOsAgnostic();
 
             Subject.BuildFileName(_movie, _movieFile)
                    .Should().Be(Path.GetFileNameWithoutExtension(_movieFile.Path));
@@ -307,6 +308,20 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
 
             Subject.BuildFileName(_movie, _movieFile)
                    .Should().Be("30.Rock.S01E01.xvid-LOL");
+        }
+
+        [Test]
+        public void should_replace_illegal_characters_when_renaming_is_disabled()
+        {
+            _namingConfig.RenameMovies = false;
+            _namingConfig.ReplaceIllegalCharacters = true;
+            _namingConfig.ColonReplacementFormat = ColonReplacementFormat.Smart;
+
+            _movieFile.SceneName = "30.Rock.S01E01.xvid:LOL";
+            _movieFile.RelativePath = "30 Rock - S01E01 - Test";
+
+            Subject.BuildFileName(_movie, _movieFile)
+                .Should().Be("30.Rock.S01E01.xvid-LOL");
         }
 
         [Test]
@@ -385,10 +400,13 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
         [TestCase("rum", "RO")]
         [TestCase("per", "FA")]
         [TestCase("ger", "DE")]
+        [TestCase("gsw", "DE")]
         [TestCase("cze", "CS")]
         [TestCase("ice", "IS")]
         [TestCase("dut", "NL")]
         [TestCase("nor", "NO")]
+        [TestCase("khk", "MN")]
+        [TestCase("mvf", "MN")]
         public void should_format_languagecodes_properly(string language, string code)
         {
             _namingConfig.StandardMovieFormat = "{Movie.Title}.{MEDIAINFO.FULL}";

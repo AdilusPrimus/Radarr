@@ -2,6 +2,8 @@ import ModelBase from 'App/ModelBase';
 import Language from 'Language/Language';
 import { MovieFile } from 'MovieFile/MovieFile';
 
+export type MovieMonitor = 'movieOnly' | 'movieAndCollection' | 'none';
+
 export type MovieStatus =
   | 'tba'
   | 'announced'
@@ -9,7 +11,9 @@ export type MovieStatus =
   | 'released'
   | 'deleted';
 
-export type CoverType = 'poster' | 'fanart';
+export type MovieAvailability = 'announced' | 'inCinemas' | 'released';
+
+export type CoverType = 'poster' | 'fanart' | 'headshot';
 
 export interface Image {
   coverType: CoverType;
@@ -18,6 +22,7 @@ export interface Image {
 }
 
 export interface Collection {
+  tmdbId: number;
   title: string;
 }
 
@@ -37,6 +42,17 @@ export interface Ratings {
   tmdb: RatingValues;
   metacritic: RatingValues;
   rottenTomatoes: RatingValues;
+  trakt: RatingValues;
+}
+
+export interface AlternativeTitle extends ModelBase {
+  sourceType: string;
+  title: string;
+}
+
+export interface MovieAddOptions {
+  monitor: MovieMonitor;
+  searchForMovie: boolean;
 }
 
 interface Movie extends ModelBase {
@@ -52,6 +68,7 @@ interface Movie extends ModelBase {
   originalTitle: string;
   originalLanguage: Language;
   collection: Collection;
+  alternateTitles: AlternativeTitle[];
   studio: string;
   qualityProfileId: number;
   added: string;
@@ -60,21 +77,26 @@ interface Movie extends ModelBase {
   physicalRelease?: string;
   digitalRelease?: string;
   releaseDate?: string;
+  rootFolderPath: string;
   runtime: number;
-  minimumAvailability: string;
+  minimumAvailability: MovieAvailability;
   path: string;
   genres: string[];
+  keywords: string[];
   ratings: Ratings;
   popularity: number;
   certification: string;
-  statistics: Statistics;
+  statistics?: Statistics;
   tags: number[];
   images: Image[];
-  movieFile: MovieFile;
+  movieFileId: number;
+  movieFile?: MovieFile;
   hasFile: boolean;
+  grabbed?: boolean;
   lastSearchTime?: string;
   isAvailable: boolean;
   isSaving?: boolean;
+  addOptions: MovieAddOptions;
 }
 
 export default Movie;

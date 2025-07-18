@@ -9,9 +9,10 @@ namespace NzbDrone.Core.Movies
         public RatingChild Tmdb { get; set; }
         public RatingChild Metacritic { get; set; }
         public RatingChild RottenTomatoes { get; set; }
+        public RatingChild Trakt { get; set; }
     }
 
-    public class RatingChild
+    public class RatingChild : MemberwiseEquatable<RatingChild>
     {
         public int Votes { get; set; }
         public decimal Value { get; set; }

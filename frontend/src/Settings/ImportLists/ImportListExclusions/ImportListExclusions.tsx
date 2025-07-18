@@ -19,6 +19,7 @@ import useModalOpenState from 'Helpers/Hooks/useModalOpenState';
 import usePrevious from 'Helpers/Hooks/usePrevious';
 import useSelectState from 'Helpers/Hooks/useSelectState';
 import { icons, kinds } from 'Helpers/Props';
+import { SortDirection } from 'Helpers/Props/sortDirections';
 import {
   bulkDeleteImportListExclusions,
   clearImportListExclusions,
@@ -42,7 +43,7 @@ import styles from './ImportListExclusions.css';
 
 const COLUMNS: Column[] = [
   {
-    name: 'tmdbid',
+    name: 'tmdbId',
     label: () => translate('TMDBId'),
     isVisible: true,
     isSortable: true,
@@ -156,8 +157,8 @@ function ImportListExclusions() {
   });
 
   const handleSortPress = useCallback(
-    (sortKey: { sortKey: string }) => {
-      dispatch(setImportListExclusionSort({ sortKey }));
+    (sortKey: string, sortDirection?: SortDirection) => {
+      dispatch(setImportListExclusionSort({ sortKey, sortDirection }));
     },
     [dispatch]
   );

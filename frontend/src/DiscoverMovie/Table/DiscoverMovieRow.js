@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import Icon from 'Components/Icon';
 import ImdbRating from 'Components/ImdbRating';
-import ImportListListConnector from 'Components/ImportListListConnector';
+import ImportListList from 'Components/ImportListList';
 import IconButton from 'Components/Link/IconButton';
 import Link from 'Components/Link/Link';
 import RottenTomatoRating from 'Components/RottenTomatoRating';
@@ -11,6 +11,7 @@ import VirtualTableRowCell from 'Components/Table/Cells/VirtualTableRowCell';
 import VirtualTableSelectCell from 'Components/Table/Cells/VirtualTableSelectCell';
 import TmdbRating from 'Components/TmdbRating';
 import Popover from 'Components/Tooltip/Popover';
+import TraktRating from 'Components/TraktRating';
 import AddNewDiscoverMovieModal from 'DiscoverMovie/AddNewDiscoverMovieModal';
 import ExcludeMovieModal from 'DiscoverMovie/Exclusion/ExcludeMovieModal';
 import { icons } from 'Helpers/Props';
@@ -291,6 +292,17 @@ class DiscoverMovieRow extends Component {
               );
             }
 
+            if (name === 'traktRating') {
+              return (
+                <VirtualTableRowCell
+                  key={name}
+                  className={styles[name]}
+                >
+                  {ratings.trakt ? <TraktRating ratings={ratings} /> : null}
+                </VirtualTableRowCell>
+              );
+            }
+
             if (name === 'popularity') {
               return (
                 <VirtualTableRowCell key={name} className={styles[name]}>
@@ -316,7 +328,7 @@ class DiscoverMovieRow extends Component {
                   key={name}
                   className={styles[name]}
                 >
-                  <ImportListListConnector
+                  <ImportListList
                     lists={lists}
                   />
                 </VirtualTableRowCell>

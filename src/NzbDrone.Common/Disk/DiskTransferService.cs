@@ -341,10 +341,11 @@ namespace NzbDrone.Common.Disk
 
             var isCifs = targetDriveFormat == "cifs";
             var isBtrfs = sourceDriveFormat == "btrfs" && targetDriveFormat == "btrfs";
+            var isZfs = sourceDriveFormat == "zfs" && targetDriveFormat == "zfs";
 
             if (mode.HasFlag(TransferMode.Copy))
             {
-                if (isBtrfs)
+                if (isBtrfs || isZfs)
                 {
                     if (_diskProvider.TryCreateRefLink(sourcePath, targetPath))
                     {
@@ -358,7 +359,7 @@ namespace NzbDrone.Common.Disk
 
             if (mode.HasFlag(TransferMode.Move))
             {
-                if (isBtrfs)
+                if (isBtrfs || isZfs)
                 {
                     if (isSameMount && _diskProvider.TryRenameFile(sourcePath, targetPath))
                     {
@@ -474,12 +475,7 @@ namespace NzbDrone.Common.Disk
             try
             {
                 _diskProvider.CopyFile(sourcePath, targetPath);
-
-                var targetSize = _diskProvider.GetFileSize(targetPath);
-                if (targetSize != originalSize)
-                {
-                    throw new IOException(string.Format("File copy incomplete. [{0}] was {1} bytes long instead of {2} bytes.", targetPath, targetSize, originalSize));
-                }
+                VerifyFile(sourcePath, targetPath, originalSize, "copy");
             }
             catch
             {
@@ -493,12 +489,7 @@ namespace NzbDrone.Common.Disk
             try
             {
                 _diskProvider.MoveFile(sourcePath, targetPath);
-
-                var targetSize = _diskProvider.GetFileSize(targetPath);
-                if (targetSize != originalSize)
-                {
-                    throw new IOException(string.Format("File move incomplete, data loss may have occurred. [{0}] was {1} bytes long instead of the expected {2}.", targetPath, targetSize, originalSize));
-                }
+                VerifyFile(sourcePath, targetPath, originalSize, "move");
             }
             catch (Exception ex)
             {
@@ -509,6 +500,27 @@ namespace NzbDrone.Common.Disk
 
                 throw;
             }
+        }
+
+        private void VerifyFile(string sourcePath, string targetPath, long originalSize, string action)
+        {
+            var targetSize = _diskProvider.GetFileSize(targetPath);
+
+            if (targetSize == originalSize)
+            {
+                return;
+            }
+
+            _logger.Debug("File {0} incomplete, waiting in case filesystem is not synchronized. [{1}] was {2} bytes long instead of the expected {3}.", action, targetPath, targetSize, originalSize);
+            WaitForIO();
+            targetSize = _diskProvider.GetFileSize(targetPath);
+
+            if (targetSize == originalSize)
+            {
+                return;
+            }
+
+            throw new IOException(string.Format("File {0} incomplete, data loss may have occurred. [{1}] was {2} bytes long instead of the expected {3}.", action, targetPath, targetSize, originalSize));
         }
 
         private bool ShouldIgnore(DirectoryInfo folder)

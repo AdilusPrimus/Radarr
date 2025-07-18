@@ -91,7 +91,10 @@ namespace NzbDrone.Core.Indexers.Newznab
         protected override ReleaseInfo ProcessItem(XElement item, ReleaseInfo releaseInfo)
         {
             releaseInfo = base.ProcessItem(item, releaseInfo);
+
+            releaseInfo.TmdbId = GetTmdbId(item);
             releaseInfo.ImdbId = GetImdbId(item);
+            releaseInfo.IndexerFlags = GetFlags(item);
 
             return releaseInfo;
         }
@@ -172,6 +175,18 @@ namespace NzbDrone.Core.Indexers.Newznab
             return url;
         }
 
+        protected virtual int GetTmdbId(XElement item)
+        {
+            var tmdbIdString = TryGetNewznabAttribute(item, "tmdbid");
+
+            if (!tmdbIdString.IsNullOrWhiteSpace() && int.TryParse(tmdbIdString, out var tmdbId))
+            {
+                return tmdbId;
+            }
+
+            return 0;
+        }
+
         protected virtual int GetImdbId(XElement item)
         {
             var imdbIdString = TryGetNewznabAttribute(item, "imdb");
@@ -207,6 +222,23 @@ namespace NzbDrone.Core.Indexers.Newznab
             }
 
             return 1900;
+        }
+
+        protected IndexerFlags GetFlags(XElement item)
+        {
+            IndexerFlags flags = 0;
+
+            if (TryGetNewznabAttribute(item, "prematch") == "1" || TryGetNewznabAttribute(item, "haspretime") == "1")
+            {
+                flags |= IndexerFlags.G_Scene;
+            }
+
+            if (TryGetNewznabAttribute(item, "nuked") == "1")
+            {
+                flags |= IndexerFlags.Nuked;
+            }
+
+            return flags;
         }
 
         protected string TryGetNewznabAttribute(XElement item, string key, string defaultValue = "")
