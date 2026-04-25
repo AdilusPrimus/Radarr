@@ -1,32 +1,28 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY src/ src/
-COPY *.props *.targets global.json ./
-RUN dotnet publish src/Radarr.sln -c Release -o /app/publish --no-self-contained
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-ARG DD_TRACER_VERSION=3.12.0
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
-    && curl -Lo /tmp/datadog-dotnet-apm.deb \
-       https://github.com/DataDog/dd-trace-dotnet/releases/download/v${DD_TRACER_VERSION}/datadog-dotnet-apm_${DD_TRACER_VERSION}_amd64.deb \
-    && curl -Lo /tmp/dd-checksums.txt \
-       https://github.com/DataDog/dd-trace-dotnet/releases/download/v${DD_TRACER_VERSION}/checksums.txt \
-    && grep "datadog-dotnet-apm_${DD_TRACER_VERSION}_amd64.deb" /tmp/dd-checksums.txt | sha256sum -c - \
-    && dpkg -i /tmp/datadog-dotnet-apm.deb \
-    && rm /tmp/datadog-dotnet-apm.deb /tmp/dd-checksums.txt \
-    && apt-get purge -y curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    curl \
+    libicu-dev \
+    libsqlite3-0 \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /app/publish .
+# Extracting so the binary is at /app/Radarr/Radarr
+RUN curl -L -o radarr.tar.gz https://github.com/Radarr/Radarr/releases/download/v6.2.0.10390/Radarr.develop.6.2.0.10390.linux-core-x64.tar.gz \
+    && tar -xzf radarr.tar.gz -C /app \
+    && rm radarr.tar.gz
+
+WORKDIR /app/Radarr
+
+# Ensure the native binary is executable
+RUN chmod +x Radarr
 
 RUN useradd -r -u 1001 appuser && chown -R appuser /app
 USER appuser
 
-ENV CORECLR_ENABLE_PROFILING=1
+ENV CORECLR_ENABLE_PROFILING=0
 ENV CORECLR_PROFILER={846F5F1C-F9AE-4B07-969E-05C26BC060D8}
-ENV CORECLR_PROFILER_PATH=/opt/datadog/Datadog.Trace.ClrProfiler.Native.so
-ENV DD_DOTNET_TRACER_HOME=/opt/datadog
 ENV DD_SERVICE=radarr
 ENV DD_LOGS_INJECTION=true
 ENV DD_RUNTIME_METRICS_ENABLED=true
@@ -38,6 +34,13 @@ ENV DD_ENV=${DD_ENV}
 
 ARG DD_VERSION=dev
 ENV DD_VERSION=${DD_VERSION}
+ENV CORECLR_PROFILER_PATH=/datadog/Datadog.Trace.ClrProfiler.Native.so
+ENV DD_DOTNET_TRACER_HOME=/datadog
 
 EXPOSE 7878
-ENTRYPOINT ["dotnet", "Radarr.dll"]
+
+# Use the native binary instead of 'dotnet Radarr.Host.dll'
+ENTRYPOINT ["./Radarr", "-nobrowser", "-data=/config"]
+
+# Added -data=/config to ensure it uses your mounted volume
+# ENTRYPOINT ["dotnet", "Radarr.Host.dll", "-nobrowser", "-data=/config"]
