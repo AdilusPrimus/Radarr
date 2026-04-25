@@ -69,6 +69,7 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
     monitored,
     status,
     images,
+    titleSlug,
     tmdbId,
     imdbId,
     youTubeTrailerId,
@@ -141,7 +142,7 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
     setIsDeleteMovieModalOpen(false);
   }, [setIsDeleteMovieModalOpen]);
 
-  const link = `/movie/${tmdbId}`;
+  const link = `/movie/${titleSlug}`;
 
   const elementStyle = {
     width: `${posterWidth}px`,
@@ -151,7 +152,9 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
   return (
     <div className={styles.content}>
       <div className={styles.posterContainer} title={title}>
-        {isSelectMode ? <MovieIndexPosterSelect movieId={movieId} /> : null}
+        {isSelectMode ? (
+          <MovieIndexPosterSelect movieId={movieId} titleSlug={titleSlug} />
+        ) : null}
 
         <Label className={styles.controls}>
           <SpinnerIconButton
