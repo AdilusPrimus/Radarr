@@ -238,6 +238,7 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("DownloadClientHistoryLimit", value); }
         }
 
+        // TODO: Rename to 'Skip Free Space Check'
         public bool SkipFreeSpaceCheckWhenImporting
         {
             get { return GetValueBoolean("SkipFreeSpaceCheckWhenImporting", false); }
@@ -442,6 +443,12 @@ namespace NzbDrone.Core.Configuration
             GetValueEnum("CertificateValidation", CertificateValidationType.Enabled);
 
         public string ApplicationUrl => GetValue("ApplicationUrl", string.Empty);
+
+        public bool TrustCgnatIpAddresses
+        {
+            get { return GetValueBoolean("TrustCgnatIpAddresses", false); }
+            set { SetValue("TrustCgnatIpAddresses", value); }
+        }
 
         private string GetValue(string key)
         {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
@@ -41,13 +42,18 @@ namespace Radarr.Api.V3.Wanted
         public PagingResource<MovieResource> GetMissingMovies([FromQuery] PagingRequestResource paging, bool monitored = true)
         {
             var pagingResource = new PagingResource<MovieResource>(paging);
-            var pagingSpec = new PagingSpec<Movie>
-            {
-                Page = pagingResource.Page,
-                PageSize = pagingResource.PageSize,
-                SortKey = pagingResource.SortKey,
-                SortDirection = pagingResource.SortDirection
-            };
+            var pagingSpec = pagingResource.MapToPagingSpec<MovieResource, Movie>(
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "movieMetadata.digitalRelease",
+                    "movieMetadata.inCinemas",
+                    "movieMetadata.physicalRelease",
+                    "movieMetadata.sortTitle",
+                    "movieMetadata.year",
+                    "movies.lastSearchTime"
+                },
+                "movieMetadata.sortTitle",
+                SortDirection.Ascending);
 
             pagingSpec.FilterExpressions.Add(v => v.Monitored == monitored);
 

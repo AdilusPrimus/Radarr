@@ -33,14 +33,14 @@ EnableExtraPlatformsInSDK()
         echo "Extra platforms already enabled"
     else
         echo "Enabling extra platform support"
-        sed -i.ORI 's/osx-x64/osx-x64;freebsd-x64;linux-x86/' $BUNDLEDVERSIONS
+        sed -i.ORI 's/osx-x64/osx-x64;freebsd-x64/' "$BUNDLEDVERSIONS"
     fi
 }
 
 EnableExtraPlatforms()
 {
     if grep -qv freebsd-x64 src/Directory.Build.props; then
-        sed -i'' -e "s^<RuntimeIdentifiers>\(.*\)</RuntimeIdentifiers>^<RuntimeIdentifiers>\1;freebsd-x64;linux-x86</RuntimeIdentifiers>^g" src/Directory.Build.props
+        sed -i'' -e "s^<RuntimeIdentifiers>\(.*\)</RuntimeIdentifiers>^<RuntimeIdentifiers>\1;freebsd-x64</RuntimeIdentifiers>^g" src/Directory.Build.props
     fi
 }
 
@@ -79,9 +79,9 @@ Build()
 
     if [[ -z "$RID" || -z "$FRAMEWORK" ]];
     then
-        dotnet msbuild -restore $slnFile -p:Configuration=Release -p:Platform=$platform -t:PublishAllRids
+        dotnet msbuild -restore $slnFile -p:SelfContained=True -p:Configuration=Release -p:Platform=$platform -t:PublishAllRids
     else
-        dotnet msbuild -restore $slnFile -p:Configuration=Release -p:Platform=$platform -p:RuntimeIdentifiers=$RID -t:PublishAllRids
+        dotnet msbuild -restore $slnFile -p:SelfContained=True -p:Configuration=Release -p:Platform=$platform -p:RuntimeIdentifiers=$RID -t:PublishAllRids
     fi
 
     ProgressEnd 'Build'
@@ -137,7 +137,7 @@ PackageLinux()
 
     echo "Adding Radarr.Mono to UpdatePackage"
     cp $folder/Radarr.Mono.* $folder/Radarr.Update
-    if [ "$framework" = "net6.0" ]; then
+    if [ "$framework" = "net8.0" ]; then
         cp $folder/Mono.Posix.NETStandard.* $folder/Radarr.Update
         cp $folder/libMonoPosixHelper.* $folder/Radarr.Update
     fi
@@ -149,7 +149,7 @@ PackageMacOS()
 {
     local framework="$1"
     local runtime="$2"
-    
+
     ProgressStart "Creating MacOS Package for $framework $runtime"
 
     local folder=$artifactsFolder/$runtime/$framework/Radarr
@@ -165,7 +165,7 @@ PackageMacOS()
 
     echo "Adding Radarr.Mono to UpdatePackage"
     cp $folder/Radarr.Mono.* $folder/Radarr.Update
-    if [ "$framework" = "net6.0" ]; then
+    if [ "$framework" = "net8.0" ]; then
         cp $folder/Mono.Posix.NETStandard.* $folder/Radarr.Update
         cp $folder/libMonoPosixHelper.* $folder/Radarr.Update
     fi
@@ -177,7 +177,7 @@ PackageMacOSApp()
 {
     local framework="$1"
     local runtime="$2"
-    
+
     ProgressStart "Creating macOS App Package for $framework $runtime"
 
     local folder="$artifactsFolder/$runtime-app/$framework"
@@ -200,11 +200,11 @@ PackageWindows()
 {
     local framework="$1"
     local runtime="$2"
-    
+
     ProgressStart "Creating Windows Package for $framework"
 
     local folder=$artifactsFolder/$runtime/$framework/Radarr
-    
+
     PackageFiles "$folder" "$framework" "$runtime"
     cp -r $outputFolder/$framework-windows/$runtime/publish/* $folder
 
@@ -245,20 +245,20 @@ BuildInstaller()
 {
     local framework="$1"
     local runtime="$2"
-    
+
     ./_inno/ISCC.exe distribution/windows/setup/radarr.iss "//DFramework=$framework" "//DRuntime=$runtime"
 }
 
 InstallInno()
 {
     ProgressStart "Installing portable Inno Setup"
-    
+
     rm -rf _inno
-    curl -s --output innosetup.exe "https://files.jrsoftware.org/is/6/innosetup-${INNOVERSION:-6.2.2}.exe"
+    curl -s -L --output innosetup.exe "https://github.com/jrsoftware/issrc/releases/download/is-${INNOVERSION//./_}/innosetup-${INNOVERSION}.exe"
     mkdir _inno
     ./innosetup.exe //portable=1 //silent //currentuser //dir=.\\_inno
     rm innosetup.exe
-    
+
     ProgressEnd "Installed portable Inno Setup"
 }
 
@@ -377,15 +377,14 @@ then
     Build
     if [[ -z "$RID" || -z "$FRAMEWORK" ]];
     then
-        PackageTests "net6.0" "win-x64"
-        PackageTests "net6.0" "win-x86"
-        PackageTests "net6.0" "linux-x64"
-        PackageTests "net6.0" "linux-musl-x64"
-        PackageTests "net6.0" "osx-x64"
+        PackageTests "net8.0" "win-x64"
+        PackageTests "net8.0" "win-x86"
+        PackageTests "net8.0" "linux-x64"
+        PackageTests "net8.0" "linux-musl-x64"
+        PackageTests "net8.0" "osx-x64"
         if [ "$ENABLE_EXTRA_PLATFORMS" = "YES" ];
         then
-            PackageTests "net6.0" "freebsd-x64"
-            PackageTests "net6.0" "linux-x86"
+            PackageTests "net8.0" "freebsd-x64"
         fi
     else
         PackageTests "$FRAMEWORK" "$RID"
@@ -413,20 +412,19 @@ then
 
     if [[ -z "$RID" || -z "$FRAMEWORK" ]];
     then
-        Package "net6.0" "win-x64"
-        Package "net6.0" "win-x86"
-        Package "net6.0" "linux-x64"
-        Package "net6.0" "linux-musl-x64"
-        Package "net6.0" "linux-arm64"
-        Package "net6.0" "linux-musl-arm64"
-        Package "net6.0" "linux-arm"
-        Package "net6.0" "linux-musl-arm"
-        Package "net6.0" "osx-x64"
-        Package "net6.0" "osx-arm64"
+        Package "net8.0" "win-x64"
+        Package "net8.0" "win-x86"
+        Package "net8.0" "linux-x64"
+        Package "net8.0" "linux-musl-x64"
+        Package "net8.0" "linux-arm64"
+        Package "net8.0" "linux-musl-arm64"
+        Package "net8.0" "linux-arm"
+        Package "net8.0" "linux-musl-arm"
+        Package "net8.0" "osx-x64"
+        Package "net8.0" "osx-arm64"
         if [ "$ENABLE_EXTRA_PLATFORMS" = "YES" ];
         then
-            Package "net6.0" "freebsd-x64"
-            Package "net6.0" "linux-x86"
+            Package "net8.0" "freebsd-x64"
         fi
     else
         Package "$FRAMEWORK" "$RID"
@@ -436,7 +434,7 @@ fi
 if [ "$INSTALLER" = "YES" ];
 then
     InstallInno
-    BuildInstaller "net6.0" "win-x64"
-    BuildInstaller "net6.0" "win-x86"
+    BuildInstaller "net8.0" "win-x64"
+    BuildInstaller "net8.0" "win-x86"
     RemoveInno
 fi

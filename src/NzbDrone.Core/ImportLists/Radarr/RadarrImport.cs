@@ -47,7 +47,7 @@ namespace NzbDrone.Core.ImportLists.Radarr
                         continue;
                     }
 
-                    if (Settings.TagIds.Any() && !Settings.TagIds.Any(x => remoteMovie.Tags.Any(y => y == x)))
+                    if (Settings.TagIds.Any() && !Settings.TagIds.Any(tagId => remoteMovie.Tags.Any(itemTagId => itemTagId == tagId)))
                     {
                         continue;
                     }
@@ -76,7 +76,7 @@ namespace NzbDrone.Core.ImportLists.Radarr
                 _importListStatusService.RecordFailure(Definition.Id);
             }
 
-            return new ImportListFetchResult { Movies = CleanupListItems(movies), AnyFailure = anyFailure };
+            return new ImportListFetchResult(CleanupListItems(movies), anyFailure);
         }
 
         public override object RequestAction(string action, IDictionary<string, string> query)

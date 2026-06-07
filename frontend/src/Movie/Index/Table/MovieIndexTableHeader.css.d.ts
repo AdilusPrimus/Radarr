@@ -9,6 +9,7 @@ interface CssExports {
   'genres': string;
   'imdbRating': string;
   'inCinemas': string;
+  'keywords': string;
   'minimumAvailability': string;
   'movieStatus': string;
   'originalLanguage': string;
@@ -27,6 +28,7 @@ interface CssExports {
   'studio': string;
   'tags': string;
   'tmdbRating': string;
+  'traktRating': string;
   'year': string;
 }
 export const cssExports: CssExports;

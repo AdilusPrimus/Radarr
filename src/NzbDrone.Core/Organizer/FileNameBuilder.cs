@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Diacritical;
-using DryIoc.ImTools;
 using NLog;
 using NzbDrone.Common.EnsureThat;
 using NzbDrone.Common.Extensions;
@@ -39,14 +38,16 @@ namespace NzbDrone.Core.Organizer
         private readonly ICustomFormatCalculationService _formatCalculator;
         private readonly Logger _logger;
 
-        private static readonly Regex TitleRegex = new Regex(@"(?<tag>\{(?:imdb-|edition-))?\{(?<prefix>[- ._\[(]*)(?<token>(?:[a-z0-9]+)(?:(?<separator>[- ._]+)(?:[a-z0-9]+))?)(?::(?<customFormat>[ ,a-z0-9|+-]+(?<![- ])))?(?<suffix>[-} ._)\]]*)\}",
+        private static readonly Regex TitleRegex = new Regex(@"(?<tag>\{(?<prefix>[-{ ._\[(]*)(?:imdb(?:id)?-|edition-))?\{(?<prefix>[-{ ._\[(]*)(?<token>(?:[a-z0-9]+)(?:(?<separator>[- ._]+)(?:[a-z0-9]+))?)(?::(?<customFormat>[ ,a-z0-9|+-]+(?<![- ])))?(?<suffix>[-} ._)\]]*)\}",
                                                              RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-        public static readonly Regex MovieTitleRegex = new Regex(@"(?<token>\{((?:(Movie|Original))(?<separator>[- ._])(Clean)?(Original)?(Title|Filename)(The)?)(?::(?<customFormat>[a-z0-9|-]+))?\})",
+        public static readonly Regex ReleaseYearRegex = new Regex(@"\{[-{ ._\[(]*Release[- ._]Year[-} ._)\]]*\}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        public static readonly Regex MovieTitleRegex = new Regex(@"(?<token>\{(?:Movie)(?<separator>[- ._])(?:Clean)?(?:OriginalTitle|Title(?:The)?)(?::(?<customFormat>[a-z0-9|-]+))?\})",
                                                                             RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private static readonly Regex FileNameCleanupRegex = new Regex(@"([- ._])(\1)+", RegexOptions.Compiled);
-        private static readonly Regex TrimSeparatorsRegex = new Regex(@"[- ._]$", RegexOptions.Compiled);
+        private static readonly Regex TrimSeparatorsRegex = new Regex(@"[- ._]+$", RegexOptions.Compiled);
 
         private static readonly Regex ScenifyRemoveChars = new Regex(@"(?<=\s)(,|<|>|\/|\\|;|:|'|""|\||`|’|~|!|\?|@|$|%|^|\*|-|_|=){1}(?=\s)|('|`|’|:|\?|,)(?=(?:(?:s|m|t|ve|ll|d|re)\s)|\s|$)|(\(|\)|\[|\]|\{|\})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex ScenifyReplaceChars = new Regex(@"[\/]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -69,6 +70,7 @@ namespace NzbDrone.Core.Organizer
             { "geo", "kat" },
             { "ger", "deu" },
             { "gre", "ell" },
+            { "gsw", "deu" },
             { "ice", "isl" },
             { "mac", "mkd" },
             { "mao", "mri" },
@@ -77,8 +79,13 @@ namespace NzbDrone.Core.Organizer
             { "rum", "ron" },
             { "slo", "slk" },
             { "tib", "bod" },
-            { "wel", "cym" }
+            { "wel", "cym" },
+            { "khk", "mon" },
+            { "mvf", "mon" }
         }.ToImmutableDictionary();
+
+        public static readonly ImmutableArray<string> BadCharacters = ImmutableArray.Create("\\", "/", "<", ">", "?", "*", "|", "\"");
+        public static readonly ImmutableArray<string> GoodCharacters = ImmutableArray.Create("+", "+", "", "", "!", "-", "", "");
 
         public FileNameBuilder(INamingConfigService namingConfigService,
                                IQualityDefinitionService qualityDefinitionService,
@@ -107,7 +114,13 @@ namespace NzbDrone.Core.Organizer
                 return GetOriginalTitle(movieFile, false);
             }
 
+            if (namingConfig.StandardMovieFormat.IsNullOrWhiteSpace())
+            {
+                throw new NamingFormatException("Standard movie format cannot be empty");
+            }
+
             var pattern = namingConfig.StandardMovieFormat;
+
             var tokenHandlers = new Dictionary<string, Func<TokenMatch, string>>(FileNameBuilderTokenEqualityComparer.Instance);
             var multipleTokens = TitleRegex.Matches(pattern).Count > 1;
 
@@ -161,28 +174,13 @@ namespace NzbDrone.Core.Organizer
                 namingConfig = _namingConfigService.GetConfig();
             }
 
-            var movieFile = movie.MovieFile;
-
-            var pattern = namingConfig.MovieFolderFormat;
             var tokenHandlers = new Dictionary<string, Func<TokenMatch, string>>(FileNameBuilderTokenEqualityComparer.Instance);
-            var multipleTokens = TitleRegex.Matches(pattern).Count > 1;
 
             AddMovieTokens(tokenHandlers, movie);
             AddReleaseDateTokens(tokenHandlers, movie.Year);
             AddIdTokens(tokenHandlers, movie);
 
-            if (movie.MovieFile != null)
-            {
-                AddQualityTokens(tokenHandlers, movie, movieFile);
-                AddMediaInfoTokens(tokenHandlers, movieFile);
-                AddMovieFileTokens(tokenHandlers, movieFile, multipleTokens);
-                AddEditionTagsTokens(tokenHandlers, movieFile);
-            }
-            else
-            {
-                AddMovieFileTokens(tokenHandlers, new MovieFile { SceneName = $"{movie.Title} {movie.Year}", RelativePath = $"{movie.Title} {movie.Year}" }, multipleTokens);
-            }
-
+            var pattern = namingConfig.MovieFolderFormat;
             var splitPatterns = pattern.Split(new char[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
             var components = new List<string>();
 
@@ -210,12 +208,33 @@ namespace NzbDrone.Core.Organizer
             title = ScenifyReplaceChars.Replace(title, " ");
             title = ScenifyRemoveChars.Replace(title, string.Empty);
 
-            return title;
+            return title.RemoveDiacritics();
         }
 
         public static string TitleThe(string title)
         {
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                return string.Empty;
+            }
+
             return TitlePrefixRegex.Replace(title, "$2, $1$3");
+        }
+
+        public static string CleanTitleThe(string title)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                return string.Empty;
+            }
+
+            if (TitlePrefixRegex.IsMatch(title))
+            {
+                var splitResult = TitlePrefixRegex.Split(title);
+                return $"{CleanTitle(splitResult[2]).Trim()}, {splitResult[1]}{CleanTitle(splitResult[3])}";
+            }
+
+            return CleanTitle(title);
         }
 
         public static string TitleFirstCharacter(string title)
@@ -235,20 +254,9 @@ namespace NzbDrone.Core.Organizer
             return "_";
         }
 
-        public static string CleanFileName(string name, bool replace = true, ColonReplacementFormat colonReplacement = ColonReplacementFormat.Delete)
+        public static string CleanFileName(string name)
         {
-            var colonReplacementFormat = colonReplacement.GetFormatString();
-
-            var result = name;
-            string[] badCharacters = { "\\", "/", "<", ">", "?", "*", ":", "|", "\"" };
-            string[] goodCharacters = { "+", "+", "", "", "!", "-", colonReplacementFormat, "", "" };
-
-            for (var i = 0; i < badCharacters.Length; i++)
-            {
-                result = result.Replace(badCharacters[i], replace ? goodCharacters[i] : string.Empty);
-            }
-
-            return result.TrimStart(' ', '.').TrimEnd(' ');
+            return CleanFileName(name, NamingConfig.Default);
         }
 
         public static string CleanFolderName(string name)
@@ -263,12 +271,15 @@ namespace NzbDrone.Core.Organizer
             tokenHandlers["{Movie Title}"] = m => Truncate(GetLanguageTitle(movie, m.CustomFormat), m.CustomFormat);
             tokenHandlers["{Movie CleanTitle}"] = m => Truncate(CleanTitle(GetLanguageTitle(movie, m.CustomFormat)), m.CustomFormat);
             tokenHandlers["{Movie TitleThe}"] = m => Truncate(TitleThe(movie.Title), m.CustomFormat);
+            tokenHandlers["{Movie CleanTitleThe}"] = m => Truncate(CleanTitleThe(movie.Title), m.CustomFormat);
             tokenHandlers["{Movie TitleFirstCharacter}"] = m => TitleFirstCharacter(TitleThe(GetLanguageTitle(movie, m.CustomFormat)));
             tokenHandlers["{Movie OriginalTitle}"] = m => Truncate(movie.MovieMetadata.Value.OriginalTitle, m.CustomFormat) ?? string.Empty;
             tokenHandlers["{Movie CleanOriginalTitle}"] = m => Truncate(CleanTitle(movie.MovieMetadata.Value.OriginalTitle ?? string.Empty), m.CustomFormat);
 
             tokenHandlers["{Movie Certification}"] = m => movie.MovieMetadata.Value.Certification ?? string.Empty;
             tokenHandlers["{Movie Collection}"] = m => Truncate(movie.MovieMetadata.Value.CollectionTitle, m.CustomFormat) ?? string.Empty;
+            tokenHandlers["{Movie CollectionThe}"] = m => Truncate(TitleThe(movie.MovieMetadata.Value.CollectionTitle), m.CustomFormat) ?? string.Empty;
+            tokenHandlers["{Movie CleanCollectionThe}"] = m => Truncate(CleanTitleThe(movie.MovieMetadata.Value.CollectionTitle), m.CustomFormat) ?? string.Empty;
         }
 
         private string GetLanguageTitle(Movie movie, string isoCodes)
@@ -302,7 +313,7 @@ namespace NzbDrone.Core.Organizer
         {
             if (movieFile.Edition.IsNotNullOrWhiteSpace())
             {
-                tokenHandlers["{Edition Tags}"] = m => Truncate(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(movieFile.Edition.ToLower()), m.CustomFormat);
+                tokenHandlers["{Edition Tags}"] = m => Truncate(GetEditionToken(movieFile), m.CustomFormat);
             }
         }
 
@@ -355,7 +366,7 @@ namespace NzbDrone.Core.Organizer
             new Dictionary<string, int>(FileNameBuilderTokenEqualityComparer.Instance)
         {
             { MediaInfoVideoDynamicRangeToken, 5 },
-            { MediaInfoVideoDynamicRangeTypeToken, 12 }
+            { MediaInfoVideoDynamicRangeTypeToken, 13 }
         };
 
         private void AddMediaInfoTokens(Dictionary<string, Func<TokenMatch, string>> tokenHandlers, MovieFile movieFile)
@@ -518,6 +529,16 @@ namespace NzbDrone.Core.Organizer
             }
         }
 
+        private string GetEditionToken(MovieFile movieFile)
+        {
+            var edition = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(movieFile.Edition.ToLowerInvariant());
+
+            edition = Regex.Replace(edition, @"((?:\b|_)\d{1,3}(?:st|th|rd|nd)(?:\b|_))", match => match.Groups[1].Value.ToLowerInvariant(), RegexOptions.IgnoreCase);
+            edition = Regex.Replace(edition, @"((?:\b|_)(?:IMAX|3D|SDR|HDR|DV)(?:\b|_))", match => match.Groups[1].Value.ToUpperInvariant(), RegexOptions.IgnoreCase);
+
+            return edition;
+        }
+
         private void UpdateMediaInfoIfNeeded(string pattern, MovieFile movieFile, Movie movie)
         {
             if (movie.Path.IsNullOrWhiteSpace())
@@ -579,7 +600,7 @@ namespace NzbDrone.Core.Organizer
                 replacementText = replacementText.Replace(" ", tokenMatch.Separator);
             }
 
-            replacementText = CleanFileName(replacementText, namingConfig.ReplaceIllegalCharacters, namingConfig.ColonReplacementFormat);
+            replacementText = CleanFileName(replacementText, namingConfig);
 
             if (!replacementText.IsNullOrWhiteSpace())
             {
@@ -624,10 +645,10 @@ namespace NzbDrone.Core.Organizer
         {
             if (movieFile.SceneName.IsNullOrWhiteSpace())
             {
-                return GetOriginalFileName(movieFile, multipleTokens);
+                return CleanFileName(GetOriginalFileName(movieFile, multipleTokens));
             }
 
-            return movieFile.SceneName;
+            return CleanFileName(movieFile.SceneName);
         }
 
         private string GetOriginalFileName(MovieFile movieFile, bool multipleTokens)
@@ -649,6 +670,51 @@ namespace NzbDrone.Core.Organizer
         {
             // Replace reserved windows device names with an alternative
             return ReservedDeviceNamesRegex.Replace(input, match => match.Value.Replace(".", "_"));
+        }
+
+        private static string CleanFileName(string name, NamingConfig namingConfig)
+        {
+            var result = name;
+
+            if (namingConfig.ReplaceIllegalCharacters)
+            {
+                // Smart replaces a colon followed by a space with space dash space for a better appearance
+                if (namingConfig.ColonReplacementFormat == ColonReplacementFormat.Smart)
+                {
+                    result = result.Replace(": ", " - ");
+                    result = result.Replace(":", "-");
+                }
+                else
+                {
+                    var replacement = string.Empty;
+
+                    switch (namingConfig.ColonReplacementFormat)
+                    {
+                        case ColonReplacementFormat.Dash:
+                            replacement = "-";
+                            break;
+                        case ColonReplacementFormat.SpaceDash:
+                            replacement = " -";
+                            break;
+                        case ColonReplacementFormat.SpaceDashSpace:
+                            replacement = " - ";
+                            break;
+                    }
+
+                    result = result.Replace(":", replacement);
+                }
+            }
+            else
+            {
+                result = result.Replace(":", string.Empty);
+            }
+
+            for (var i = 0; i < BadCharacters.Length; i++)
+            {
+                result = result.Replace(BadCharacters[i], namingConfig.ReplaceIllegalCharacters ? GoodCharacters[i] : string.Empty);
+            }
+
+            return result.TrimStart(' ', '.').TrimEnd(' ');
         }
 
         private string Truncate(string input, string formatter)
@@ -704,13 +770,12 @@ namespace NzbDrone.Core.Organizer
         }
     }
 
-    public enum MultiEpisodeStyle
+    public enum ColonReplacementFormat
     {
-        Extend = 0,
-        Duplicate = 1,
-        Repeat = 2,
-        Scene = 3,
-        Range = 4,
-        PrefixedRange = 5
+        Delete = 0,
+        Dash = 1,
+        SpaceDash = 2,
+        SpaceDashSpace = 3,
+        Smart = 4
     }
 }

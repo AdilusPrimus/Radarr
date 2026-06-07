@@ -299,7 +299,7 @@ namespace NzbDrone.Core.Test.Download.DownloadClientTests.SabnzbdTests
             Subject.GetItems().Should().BeEmpty();
         }
 
-        [TestCase("[ TOWN ]-[ http://www.town.ag ]-[ ANIME ]-[Usenet Provider >> http://www.ssl- <<] - [Commie] Aldnoah Zero 18 [234C8FC7]", "[ TOWN ]-[ http++www.town.ag ]-[ ANIME ]-[Usenet Provider  http++www.ssl- ] - [Commie] Aldnoah Zero 18 [234C8FC7].nzb")]
+        [TestCase("[ TOWN ]-[ http://www.town.ag ]-[ ANIME ]-[Usenet Provider >> http://www.ssl- <<] - [Commie] Aldnoah Zero 18 [234C8FC7]", "[ TOWN ]-[ http-++www.town.ag ]-[ ANIME ]-[Usenet Provider  http-++www.ssl- ] - [Commie] Aldnoah Zero 18 [234C8FC7].nzb")]
         public async Task Download_should_use_clean_title(string title, string filename)
         {
             GivenSuccessfulDownload();
@@ -472,6 +472,37 @@ namespace NzbDrone.Core.Test.Download.DownloadClientTests.SabnzbdTests
         public void should_set_history_removes_completed_downloads_true(string historyRetention)
         {
             _config.Misc.history_retention = historyRetention;
+
+            var downloadClientInfo = Subject.GetStatus();
+
+            downloadClientInfo.RemovesCompletedDownloads.Should().BeTrue();
+        }
+
+        [TestCase("all", 0)]
+        [TestCase("days-archive", 15)]
+        [TestCase("days-delete", 15)]
+        public void should_set_history_removes_completed_downloads_false_for_separate_properties(string option, int number)
+        {
+            _config.Misc.history_retention_option = option;
+            _config.Misc.history_retention_number = number;
+
+            var downloadClientInfo = Subject.GetStatus();
+
+            downloadClientInfo.RemovesCompletedDownloads.Should().BeFalse();
+        }
+
+        [TestCase("number-archive", 10)]
+        [TestCase("number-delete", 10)]
+        [TestCase("number-archive", 0)]
+        [TestCase("number-delete", 0)]
+        [TestCase("days-archive", 3)]
+        [TestCase("days-delete", 3)]
+        [TestCase("all-archive", 0)]
+        [TestCase("all-delete", 0)]
+        public void should_set_history_removes_completed_downloads_true_for_separate_properties(string option, int number)
+        {
+            _config.Misc.history_retention_option = option;
+            _config.Misc.history_retention_number = number;
 
             var downloadClientInfo = Subject.GetStatus();
 

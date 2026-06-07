@@ -1,13 +1,15 @@
 import React from 'react';
 import Icon from 'Components/Icon';
 import ImdbRating from 'Components/ImdbRating';
+import MovieTagList from 'Components/MovieTagList';
 import RottenTomatoRating from 'Components/RottenTomatoRating';
-import TagListConnector from 'Components/TagListConnector';
 import TmdbRating from 'Components/TmdbRating';
+import TraktRating from 'Components/TraktRating';
 import { icons } from 'Helpers/Props';
 import Language from 'Language/Language';
 import { Ratings } from 'Movie/Movie';
 import QualityProfile from 'typings/QualityProfile';
+import formatDate from 'Utilities/Date/formatDate';
 import formatDateTime from 'Utilities/Date/formatDateTime';
 import getRelativeDate from 'Utilities/Date/getRelativeDate';
 import formatBytes from 'Utilities/Number/formatBytes';
@@ -43,6 +45,7 @@ interface MovieIndexPosterInfoProps {
   showTmdbRating: boolean;
   showImdbRating: boolean;
   showRottenTomatoesRating: boolean;
+  showTraktRating: boolean;
   showTags: boolean;
 }
 
@@ -76,6 +79,7 @@ function MovieIndexPosterInfo(props: MovieIndexPosterInfoProps) {
     showTmdbRating,
     showImdbRating,
     showRottenTomatoesRating,
+    showTraktRating,
     showTags,
   } = props;
 
@@ -136,7 +140,13 @@ function MovieIndexPosterInfo(props: MovieIndexPosterInfoProps) {
     });
 
     return (
-      <div className={styles.info} title={translate('InCinemas')}>
+      <div
+        className={styles.info}
+        title={`${translate('InCinemas')}: ${formatDate(
+          inCinemas,
+          longDateFormat
+        )}`}
+      >
         <Icon name={icons.IN_CINEMAS} /> {inCinemasDate}
       </div>
     );
@@ -152,7 +162,13 @@ function MovieIndexPosterInfo(props: MovieIndexPosterInfoProps) {
     });
 
     return (
-      <div className={styles.info} title={translate('DigitalRelease')}>
+      <div
+        className={styles.info}
+        title={`${translate('DigitalRelease')}: ${formatDate(
+          digitalRelease,
+          longDateFormat
+        )}`}
+      >
         <Icon name={icons.MOVIE_FILE} /> {digitalReleaseDate}
       </div>
     );
@@ -172,7 +188,13 @@ function MovieIndexPosterInfo(props: MovieIndexPosterInfoProps) {
     });
 
     return (
-      <div className={styles.info} title={translate('PhysicalRelease')}>
+      <div
+        className={styles.info}
+        title={`${translate('PhysicalRelease')}: ${formatDate(
+          physicalRelease,
+          longDateFormat
+        )}`}
+      >
         <Icon name={icons.DISC} /> {physicalReleaseDate}
       </div>
     );
@@ -180,7 +202,13 @@ function MovieIndexPosterInfo(props: MovieIndexPosterInfoProps) {
 
   if (sortKey === 'releaseDate' && releaseDate && !showReleaseDate) {
     return (
-      <div className={styles.info} title={translate('ReleaseDate')}>
+      <div
+        className={styles.info}
+        title={`${translate('ReleaseDate')}: ${formatDate(
+          releaseDate,
+          longDateFormat
+        )}`}
+      >
         <Icon name={icons.CALENDAR} />{' '}
         {getRelativeDate({
           date: releaseDate,
@@ -221,11 +249,19 @@ function MovieIndexPosterInfo(props: MovieIndexPosterInfoProps) {
     );
   }
 
+  if (!showTraktRating && sortKey === 'traktRating' && !!ratings.trakt) {
+    return (
+      <div className={styles.info}>
+        <TraktRating ratings={ratings} iconSize={12} />
+      </div>
+    );
+  }
+
   if (!showTags && sortKey === 'tags' && tags.length) {
     return (
       <div className={styles.tags}>
         <div className={styles.tagsList}>
-          <TagListConnector tags={tags} />
+          <MovieTagList tags={tags} />
         </div>
       </div>
     );
