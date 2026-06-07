@@ -57,6 +57,13 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 return UpgradeableRejectReason.None;
             }
 
+            if (!qualityProfile.UpgradeAllowed)
+            {
+                _logger.Debug("Quality profile '{0}' does not allow upgrading. Skipping.", qualityProfile.Name);
+
+                return UpgradeableRejectReason.UpgradesNotAllowed;
+            }
+
             // Reject unless the user does not prefer propers/repacks and it's a revision downgrade.
             if (downloadPropersAndRepacks != ProperDownloadTypes.DoNotPrefer &&
                 qualityRevisionCompare < 0)
@@ -86,13 +93,24 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 return UpgradeableRejectReason.CustomFormatScore;
             }
 
-            if (qualityProfile.UpgradeAllowed && currentFormatScore >= qualityProfile.CutoffFormatScore)
+            if (currentFormatScore >= qualityProfile.CutoffFormatScore)
             {
                 _logger.Debug("Existing item meets cut-off for custom formats, skipping. Existing: [{0}] ({1}). Cutoff score: {2}",
                     currentCustomFormats.ConcatToString(),
                     currentFormatScore,
                     qualityProfile.CutoffFormatScore);
                 return UpgradeableRejectReason.CustomFormatCutoff;
+            }
+
+            if (newFormatScore < currentFormatScore + qualityProfile.MinUpgradeFormatScore)
+            {
+                _logger.Debug("New item's custom formats [{0}] ({1}) do not meet minimum custom format score increment of {3} required for upgrade, skipping. Existing: [{4}] ({5}).",
+                              newCustomFormats.ConcatToString(),
+                              newFormatScore,
+                              qualityProfile.MinUpgradeFormatScore,
+                              currentCustomFormats.ConcatToString(),
+                              currentFormatScore);
+                return UpgradeableRejectReason.MinCustomFormatScore;
             }
 
             _logger.Debug("New item's custom formats [{0}] ({1}) improve on [{2}] ({3}), accepting",
@@ -124,7 +142,9 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
         private bool CustomFormatCutoffNotMet(QualityProfile profile, List<CustomFormat> currentFormats)
         {
             var score = profile.CalculateCustomFormatScore(currentFormats);
-            return score < profile.CutoffFormatScore;
+            var cutoff = profile.UpgradeAllowed ? profile.CutoffFormatScore : profile.MinFormatScore;
+
+            return score < cutoff;
         }
 
         public bool CutoffNotMet(QualityProfile profile, QualityModel currentQuality, List<CustomFormat> currentFormats, QualityModel newQuality = null)
@@ -165,6 +185,12 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
         {
             var isQualityUpgrade = new QualityModelComparer(qualityProfile).Compare(newQuality, currentQuality) > 0;
             var isCustomFormatUpgrade = qualityProfile.CalculateCustomFormatScore(newCustomFormats) > qualityProfile.CalculateCustomFormatScore(currentCustomFormats);
+
+            if (IsRevisionUpgrade(currentQuality, newQuality))
+            {
+                _logger.Debug("New quality '{0}' is a revision upgrade for '{1}'", newQuality, currentQuality);
+                return true;
+            }
 
             if ((isQualityUpgrade || isCustomFormatUpgrade) && qualityProfile.UpgradeAllowed)
             {

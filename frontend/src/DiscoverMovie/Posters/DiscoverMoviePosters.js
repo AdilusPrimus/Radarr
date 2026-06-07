@@ -22,12 +22,12 @@ const additionalColumnCount = {
 };
 
 function calculateColumnWidth(width, posterSize, isSmallScreen) {
-  const maxiumColumnWidth = isSmallScreen ? 172 : 182;
-  const columns = Math.floor(width / maxiumColumnWidth);
-  const remainder = width % maxiumColumnWidth;
+  const maximumColumnWidth = isSmallScreen ? 172 : 182;
+  const columns = Math.floor(width / maximumColumnWidth);
+  const remainder = width % maximumColumnWidth;
 
   if (remainder === 0 && posterSize === 'large') {
-    return maxiumColumnWidth;
+    return maximumColumnWidth;
   }
 
   return Math.floor(width / (columns + additionalColumnCount[posterSize]));
@@ -39,7 +39,8 @@ function calculateRowHeight(posterHeight, sortKey, isSmallScreen, posterOptions)
     showTitle,
     showTmdbRating,
     showImdbRating,
-    showRottenTomatoesRating
+    showRottenTomatoesRating,
+    showTraktRating
   } = posterOptions;
 
   const heights = [
@@ -64,6 +65,10 @@ function calculateRowHeight(posterHeight, sortKey, isSmallScreen, posterOptions)
     heights.push(19);
   }
 
+  if (showTraktRating) {
+    heights.push(19);
+  }
+
   switch (sortKey) {
     case 'studio':
     case 'inCinemas':
@@ -85,6 +90,11 @@ function calculateRowHeight(posterHeight, sortKey, isSmallScreen, posterOptions)
       break;
     case 'rottenTomatoesRating':
       if (!showRottenTomatoesRating) {
+        heights.push(19);
+      }
+      break;
+    case 'traktRating':
+      if (!showTraktRating) {
         heights.push(19);
       }
       break;
@@ -160,7 +170,7 @@ class DiscoverMoviePosters extends Component {
       if (this._grid && index != null) {
         const row = Math.floor(index / columnCount);
 
-        this._grid.scrollToCell({
+        this._gridScrollToCell({
           rowIndex: row,
           columnIndex: 0
         });
@@ -219,7 +229,8 @@ class DiscoverMoviePosters extends Component {
       showTitle,
       showTmdbRating,
       showImdbRating,
-      showRottenTomatoesRating
+      showRottenTomatoesRating,
+      showTraktRating
     } = posterOptions;
 
     const movieIdx = rowIndex * columnCount + columnIndex;
@@ -248,6 +259,7 @@ class DiscoverMoviePosters extends Component {
           showTmdbRating={showTmdbRating}
           showImdbRating={showImdbRating}
           showRottenTomatoesRating={showRottenTomatoesRating}
+          showTraktRating={showTraktRating}
           showRelativeDates={showRelativeDates}
           shortDateFormat={shortDateFormat}
           timeFormat={timeFormat}
@@ -257,6 +269,19 @@ class DiscoverMoviePosters extends Component {
         />
       </div>
     );
+  };
+
+  _gridScrollToCell = ({ rowIndex = 0, columnIndex = 0 }) => {
+    const scrollOffset = this._grid.getOffsetForCell({
+      rowIndex,
+      columnIndex
+    });
+
+    this._gridScrollToPosition(scrollOffset);
+  };
+
+  _gridScrollToPosition = ({ scrollTop = 0, scrollLeft = 0 }) => {
+    this.props.scroller?.scrollTo({ top: scrollTop, left: scrollLeft });
   };
 
   //

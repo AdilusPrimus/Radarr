@@ -48,6 +48,15 @@ function DiscoverMovieSortMenu(props) {
         </SortMenuItem>
 
         <SortMenuItem
+          name="year"
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onPress={onSortSelect}
+        >
+          {translate('Year')}
+        </SortMenuItem>
+
+        <SortMenuItem
           name="inCinemas"
           sortKey={sortKey}
           sortDirection={sortDirection}
@@ -108,6 +117,15 @@ function DiscoverMovieSortMenu(props) {
           onPress={onSortSelect}
         >
           {translate('RottenTomatoesRating')}
+        </SortMenuItem>
+
+        <SortMenuItem
+          name="traktRating"
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onPress={onSortSelect}
+        >
+          {translate('TraktRating')}
         </SortMenuItem>
 
         <SortMenuItem

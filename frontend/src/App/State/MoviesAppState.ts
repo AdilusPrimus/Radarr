@@ -3,7 +3,7 @@ import AppSectionState, {
   AppSectionSaveState,
 } from 'App/State/AppSectionState';
 import Column from 'Components/Table/Column';
-import SortDirection from 'Helpers/Props/SortDirection';
+import { SortDirection } from 'Helpers/Props/sortDirections';
 import Movie from 'Movie/Movie';
 import { Filter, FilterBuilderProp } from './AppState';
 
@@ -27,6 +27,7 @@ export interface MovieIndexAppState {
     showTmdbRating: boolean;
     showImdbRating: boolean;
     showRottenTomatoesRating: boolean;
+    showTraktRating: boolean;
     showTags: boolean;
     showSearchAction: boolean;
   };
@@ -63,6 +64,8 @@ interface MoviesAppState
   deleteOptions: {
     addImportExclusion: boolean;
   };
+
+  pendingChanges: Partial<Movie>;
 }
 
 export default MoviesAppState;

@@ -22,6 +22,7 @@ import {
 } from 'Store/Actions/settingsActions';
 import selectSettings from 'Store/Selectors/selectSettings';
 import ImportListExclusion from 'typings/ImportListExclusion';
+import { InputChanged } from 'typings/inputs';
 import { PendingSection } from 'typings/pending';
 import translate from 'Utilities/String/translate';
 import styles from './EditImportListExclusionModalContent.css';
@@ -32,12 +33,6 @@ const newImportListExclusion = {
   tmdbId: 0,
 };
 
-interface EditImportListExclusionModalContentProps {
-  id?: number;
-  onModalClose: () => void;
-  onDeleteImportListExclusionPress?: () => void;
-}
-
 function createImportListExclusionSelector(id?: number) {
   return createSelector(
     (state: AppState) => state.settings.importListExclusions,
@@ -46,12 +41,11 @@ function createImportListExclusionSelector(id?: number) {
         importListExclusions;
 
       const mapping = id
-        ? items.find((i) => i.id === id)
+        ? items.find((i) => i.id === id)!
         : newImportListExclusion;
       const settings = selectSettings(mapping, pendingChanges, saveError);
 
       return {
-        id,
         isFetching,
         error,
         isSaving,
@@ -63,12 +57,24 @@ function createImportListExclusionSelector(id?: number) {
   );
 }
 
-function EditImportListExclusionModalContent(
-  props: EditImportListExclusionModalContentProps
-) {
-  const { id, onModalClose, onDeleteImportListExclusionPress } = props;
+interface EditImportListExclusionModalContentProps {
+  id?: number;
+  onModalClose: () => void;
+  onDeleteImportListExclusionPress?: () => void;
+}
+
+function EditImportListExclusionModalContent({
+  id,
+  onModalClose,
+  onDeleteImportListExclusionPress,
+}: EditImportListExclusionModalContentProps) {
+  const { isFetching, isSaving, item, error, saveError, ...otherProps } =
+    useSelector(createImportListExclusionSelector(id));
+
+  const { movieTitle, movieYear, tmdbId } = item;
 
   const dispatch = useDispatch();
+  const previousIsSaving = usePrevious(isSaving);
 
   const dispatchSetImportListExclusionValue = (payload: {
     name: string;
@@ -78,20 +84,10 @@ function EditImportListExclusionModalContent(
     dispatch(setImportListExclusionValue(payload));
   };
 
-  const { isFetching, isSaving, item, error, saveError, ...otherProps } =
-    useSelector(createImportListExclusionSelector(props.id));
-  const previousIsSaving = usePrevious(isSaving);
-
-  const { movieTitle, movieYear, tmdbId } = item;
-
   useEffect(() => {
     if (!id) {
-      Object.keys(newImportListExclusion).forEach((name) => {
-        dispatchSetImportListExclusionValue({
-          name,
-          value:
-            newImportListExclusion[name as keyof typeof newImportListExclusion],
-        });
+      Object.entries(newImportListExclusion).forEach(([name, value]) => {
+        dispatchSetImportListExclusionValue({ name, value });
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,16 +97,16 @@ function EditImportListExclusionModalContent(
     if (previousIsSaving && !isSaving && !saveError) {
       onModalClose();
     }
-  });
+  }, [previousIsSaving, isSaving, saveError, onModalClose]);
 
   const onSavePress = useCallback(() => {
     dispatch(saveImportListExclusion({ id }));
   }, [dispatch, id]);
 
   const onInputChange = useCallback(
-    (payload: { name: string; value: string | number }) => {
+    (change: InputChanged) => {
       // @ts-expect-error 'setImportListExclusionValue' isn't typed yet
-      dispatch(setImportListExclusionValue(payload));
+      dispatch(setImportListExclusionValue(change));
     },
     [dispatch]
   );
@@ -174,7 +170,7 @@ function EditImportListExclusionModalContent(
       </ModalBody>
 
       <ModalFooter>
-        {id && (
+        {id ? (
           <Button
             className={styles.deleteButton}
             kind={kinds.DANGER}
@@ -182,7 +178,7 @@ function EditImportListExclusionModalContent(
           >
             {translate('Delete')}
           </Button>
-        )}
+        ) : null}
 
         <Button onPress={onModalClose}>{translate('Cancel')}</Button>
 

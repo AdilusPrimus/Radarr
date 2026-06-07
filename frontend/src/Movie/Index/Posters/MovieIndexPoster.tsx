@@ -7,20 +7,22 @@ import Label from 'Components/Label';
 import IconButton from 'Components/Link/IconButton';
 import Link from 'Components/Link/Link';
 import SpinnerIconButton from 'Components/Link/SpinnerIconButton';
+import MovieTagList from 'Components/MovieTagList';
 import RottenTomatoRating from 'Components/RottenTomatoRating';
-import TagListConnector from 'Components/TagListConnector';
 import TmdbRating from 'Components/TmdbRating';
 import Popover from 'Components/Tooltip/Popover';
+import TraktRating from 'Components/TraktRating';
 import { icons } from 'Helpers/Props';
 import DeleteMovieModal from 'Movie/Delete/DeleteMovieModal';
 import MovieDetailsLinks from 'Movie/Details/MovieDetailsLinks';
-import EditMovieModalConnector from 'Movie/Edit/EditMovieModalConnector';
+import EditMovieModal from 'Movie/Edit/EditMovieModal';
 import MovieIndexProgressBar from 'Movie/Index/ProgressBar/MovieIndexProgressBar';
 import MovieIndexPosterSelect from 'Movie/Index/Select/MovieIndexPosterSelect';
 import { Statistics } from 'Movie/Movie';
 import MoviePoster from 'Movie/MoviePoster';
 import { executeCommand } from 'Store/Actions/commandActions';
 import createUISettingsSelector from 'Store/Selectors/createUISettingsSelector';
+import formatDate from 'Utilities/Date/formatDate';
 import getRelativeDate from 'Utilities/Date/getRelativeDate';
 import translate from 'Utilities/String/translate';
 import createMovieIndexItemSelector from '../createMovieIndexItemSelector';
@@ -54,6 +56,7 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
     showTmdbRating,
     showImdbRating,
     showRottenTomatoesRating,
+    showTraktRating,
     showTags,
     showSearchAction,
   } = useSelector(selectPosterOptions);
@@ -66,6 +69,7 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
     monitored,
     status,
     images,
+    titleSlug,
     tmdbId,
     imdbId,
     youTubeTrailerId,
@@ -138,7 +142,7 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
     setIsDeleteMovieModalOpen(false);
   }, [setIsDeleteMovieModalOpen]);
 
-  const link = `/movie/${tmdbId}`;
+  const link = `/movie/${titleSlug}`;
 
   const elementStyle = {
     width: `${posterWidth}px`,
@@ -148,7 +152,9 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
   return (
     <div className={styles.content}>
       <div className={styles.posterContainer} title={title}>
-        {isSelectMode ? <MovieIndexPosterSelect movieId={movieId} /> : null}
+        {isSelectMode ? (
+          <MovieIndexPosterSelect movieId={movieId} titleSlug={titleSlug} />
+        ) : null}
 
         <Label className={styles.controls}>
           <SpinnerIconButton
@@ -241,7 +247,13 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
       ) : null}
 
       {showCinemaRelease && inCinemas ? (
-        <div className={styles.title} title={translate('InCinemas')}>
+        <div
+          className={styles.title}
+          title={`${translate('InCinemas')}: ${formatDate(
+            inCinemas,
+            longDateFormat
+          )}`}
+        >
           <Icon name={icons.IN_CINEMAS} />{' '}
           {getRelativeDate({
             date: inCinemas,
@@ -254,7 +266,13 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
       ) : null}
 
       {showDigitalRelease && digitalRelease ? (
-        <div className={styles.title} title={translate('DigitalRelease')}>
+        <div
+          className={styles.title}
+          title={`${translate('DigitalRelease')}: ${formatDate(
+            digitalRelease,
+            longDateFormat
+          )}`}
+        >
           <Icon name={icons.MOVIE_FILE} />{' '}
           {getRelativeDate({
             date: digitalRelease,
@@ -267,7 +285,13 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
       ) : null}
 
       {showPhysicalRelease && physicalRelease ? (
-        <div className={styles.title} title={translate('PhysicalRelease')}>
+        <div
+          className={styles.title}
+          title={`${translate('PhysicalRelease')}: ${formatDate(
+            physicalRelease,
+            longDateFormat
+          )}`}
+        >
           <Icon name={icons.DISC} />{' '}
           {getRelativeDate({
             date: physicalRelease,
@@ -280,7 +304,13 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
       ) : null}
 
       {showReleaseDate && releaseDate ? (
-        <div className={styles.title} title={translate('ReleaseDate')}>
+        <div
+          className={styles.title}
+          title={`${translate('ReleaseDate')}: ${formatDate(
+            releaseDate,
+            longDateFormat
+          )}`}
+        >
           <Icon name={icons.CALENDAR} />{' '}
           {getRelativeDate({
             date: releaseDate,
@@ -310,10 +340,16 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
         </div>
       ) : null}
 
+      {showTraktRating && !!ratings.trakt ? (
+        <div className={styles.title}>
+          <TraktRating ratings={ratings} iconSize={12} />
+        </div>
+      ) : null}
+
       {showTags && tags.length ? (
         <div className={styles.tags}>
           <div className={styles.tagsList}>
-            <TagListConnector tags={tags} />
+            <MovieTagList tags={tags} />
           </div>
         </div>
       ) : null}
@@ -347,10 +383,11 @@ function MovieIndexPoster(props: MovieIndexPosterProps) {
         showTmdbRating={showTmdbRating}
         showImdbRating={showImdbRating}
         showRottenTomatoesRating={showRottenTomatoesRating}
+        showTraktRating={showTraktRating}
         showTags={showTags}
       />
 
-      <EditMovieModalConnector
+      <EditMovieModal
         isOpen={isEditMovieModalOpen}
         movieId={movieId}
         onModalClose={onEditMovieModalClose}
